@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Official ProMaestro / FSG logo palette -->
+    <color name="navy_primary">#0D141F</color>
+    <color name="navy_panel">#1B2737</color>
+    <color name="navy_elevated">#233143</color>
+    <color name="navy_deep">#07111F</color>
+    <color name="gold_accent">#D4AF37</color>
+    <color name="gold_soft">#DCB756</color>
+    <color name="gold_bright">#F0D060</color>
+    <color name="white">#F5F7FA</color>
+    <color name="muted">#AEBBCA</color>
+    <color name="steel">#6B7C8F</color>
+    <color name="success">#2ECC71</color>
+    <color name="danger">#E74C3C</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+</resources>
