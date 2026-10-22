@@ -10,7 +10,6 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,6 +35,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.OutputStream;
+import org.json.JSONObject;
 
 /**
  * FSG God-Mode Launcher – Ubuntu Touch / Lomiri inspired, but more powerful.
@@ -546,7 +549,7 @@ public class MainActivity extends Activity {
                 () -> openLocalWeb("http://127.0.0.1:8765/api/health", "Linux Status"));
 
         if (theme.isAiEnabled()) {
-            addTile("✦", "MAESTRO ASSISTANT", "On-device AI · expandable",
+            addTile("✦", "MAESTRO ASSISTANT", "AI integration not configured",
                     () -> Toast.makeText(this,
                             "Maestro AI ready.\nHook a local LLM or cloud key in Settings.",
                             Toast.LENGTH_LONG).show());
@@ -699,14 +702,8 @@ public class MainActivity extends Activity {
                         Toast.makeText(this, "Install Tasker & create profile FSG_GodMode", Toast.LENGTH_LONG).show();
                     }
                 });
-        addTile("🔗", "ZAPIER WEBHOOK", "Trigger your catch hook",
-                () -> {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(theme.getZapierUrl())));
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Set Zapier URL in Settings", Toast.LENGTH_SHORT).show();
-                    }
-                });
+        addTile("🔗", "ZAPIER WEBHOOK", "Send an event to your configured catch hook",
+                this::sendZapierWebhook);
         addTile("💬", "WHATSAPP QUICK SEND", "Share sheet / direct chat",
                 () -> {
                     try {
@@ -721,8 +718,8 @@ public class MainActivity extends Activity {
                 });
         addTile("🖥", "TERMUX SESSION", "Open terminal",
                 () -> launchPackage("com.termux"));
-        addTile("📡", "APEX RESTART", "Use Termux:Widget 05-RESTART-APEX.sh",
-                () -> Toast.makeText(this, "Use Termux:Widget shortcuts from the zip", Toast.LENGTH_LONG).show());
+        addTile("📡", "APEX HEALTH CHECK", "Open the local backend health endpoint",
+                () -> openLocalWeb("http://127.0.0.1:8765/api/health", "APEX Health"));
 
         addSection("POWER TIPS", null);
         TextView tips = txt(
@@ -733,6 +730,54 @@ public class MainActivity extends Activity {
                 12, theme.muted, false);
         tips.setPadding(dp(4), dp(4), dp(4), dp(8));
         scopeContent.addView(tips);
+    }
+
+    /**
+     * Sends a small JSON event to the user-configured Zapier Catch Hook.
+     * Runs on a worker thread so the launcher UI remains responsive.
+     */
+    private void sendZapierWebhook() {
+        final String hook = theme.getZapierUrl() == null ? "" : theme.getZapierUrl().trim();
+        if (!hook.startsWith("https://hooks.zapier.com/hooks/catch/")
+                || hook.endsWith("/catch/") || hook.contains("YOUR_HOOK")) {
+            Toast.makeText(this, "Open Settings and save your complete Zapier Catch Hook URL first.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, "Sending Zapier test event…", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            int code = -1;
+            try {
+                JSONObject payload = new JSONObject();
+                payload.put("source", "FSG God-Mode Launcher");
+                payload.put("event", "manual_trigger");
+                payload.put("timestamp", System.currentTimeMillis());
+                URL url = new URL(hook);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(8000);
+                connection.setReadTimeout(8000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                byte[] body = payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                connection.setFixedLengthStreamingMode(body.length);
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write(body);
+                }
+                code = connection.getResponseCode();
+            } catch (Exception ignored) {
+                // Error is reported on the main thread below.
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+            final int result = code;
+            runOnUiThread(() -> Toast.makeText(this,
+                    result >= 200 && result < 300
+                            ? "Zapier accepted the event (HTTP " + result + ")."
+                            : "Zapier request failed. Check the hook URL and internet connection.",
+                    Toast.LENGTH_LONG).show());
+        }, "FSG-Zapier-Webhook").start();
     }
 
     private void buildBusinessScope() {

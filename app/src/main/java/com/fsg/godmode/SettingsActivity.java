@@ -72,7 +72,7 @@ public class SettingsActivity extends Activity {
         zap.setHintTextColor(theme.muted);
         zap.setBackground(card(theme.panel));
         zap.setPadding(dp(14), dp(12), dp(14), dp(12));
-        zap.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
+        zap.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         root.addView(zap, new LinearLayout.LayoutParams(-1, -2));
 
         TextView saveZap = txt("SAVE ZAPIER URL", 14, theme.bg, true);
@@ -83,8 +83,13 @@ public class SettingsActivity extends Activity {
         sp.topMargin = dp(10);
         root.addView(saveZap, sp);
         saveZap.setOnClickListener(v -> {
-            theme.setZapierUrl(zap.getText().toString().trim());
-            Toast.makeText(this, "Zapier URL saved", Toast.LENGTH_SHORT).show();
+            String url = zap.getText().toString().trim();
+            if (!url.isEmpty() && !url.startsWith("https://hooks.zapier.com/hooks/catch/")) {
+                Toast.makeText(this, "Use the complete HTTPS Zapier Catch Hook URL.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            theme.setZapierUrl(url);
+            Toast.makeText(this, url.isEmpty() ? "Zapier URL cleared" : "Zapier URL saved", Toast.LENGTH_SHORT).show();
         });
 
         // Theme quick switch
@@ -107,6 +112,11 @@ public class SettingsActivity extends Activity {
                 recreate(); // refresh this screen with new colors
             });
         }
+
+        // Integration status: be explicit about configuration requirements.
+        root.addView(spacer(18));
+        root.addView(txt("INTEGRATION NOTES", 12, theme.gold, true));
+        root.addView(txt("Zapier sends a JSON event only after a complete Catch Hook URL is saved. AI Maestro is a placeholder until a local AI service or API is configured. APEX controls require the existing local services to be running.", 12, theme.muted, false));
 
         // Info
         root.addView(spacer(28));
