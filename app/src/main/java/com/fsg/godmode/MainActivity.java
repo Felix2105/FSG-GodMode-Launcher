@@ -1,5 +1,6 @@
 package com.fsg.godmode;
 
+import android.widget.ImageView;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -663,8 +664,10 @@ public class MainActivity extends Activity {
         card.setPadding(dp(12), dp(10), dp(12), dp(10));
         card.setBackground(cardBg(theme.panel, 12));
 
-        TextView icon = txt(label.substring(0, 1).toUpperCase(), 16, theme.gold, true);
-        icon.setGravity(Gravity.CENTER);
+        ImageView icon = new ImageView(this);
+        icon.setImageDrawable(ri.loadIcon(getPackageManager()));
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
         icon.setBackground(pill(theme.panelElevated));
         card.addView(icon, new LinearLayout.LayoutParams(dp(38), dp(38)));
 
@@ -787,12 +790,12 @@ public class MainActivity extends Activity {
                 () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Service Requests"));
         addTile("📋", "QUOTES & INVOICES", "Generate & track",
                 () -> openLocalWeb("http://127.0.0.1:8080/", "Quotes"));
-        addTile("👥", "CLIENT CRM", "Contacts & history",
-                () -> Toast.makeText(this, "Point this tile at your CRM URL", Toast.LENGTH_SHORT).show());
+        addTile("👥", "CLIENT CRM", "Open Business HQ workspace",
+                () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Client CRM"));
         addTile("📊", "DAILY DASHBOARD", "Today’s numbers",
                 () -> openLocalWeb("http://127.0.0.1:8080/", "Dashboard"));
-        addTile("🛠", "FIELD TOOLS", "Checklists · photos · notes",
-                () -> Toast.makeText(this, "Field tools workspace", Toast.LENGTH_SHORT).show());
+        addTile("🛠", "FIELD TOOLS", "Open APEX field workspace",
+                () -> openLocalWeb("http://127.0.0.1:8080/", "Field Tools"));
     }
 
     private void buildSettingsScope() {

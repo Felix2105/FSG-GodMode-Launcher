@@ -3,7 +3,7 @@ name: Build FSG God-Mode APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main, master, 'fsg-patch-*']
 
 permissions:
   contents: read
