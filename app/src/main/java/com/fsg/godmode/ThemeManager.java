@@ -73,13 +73,13 @@ public class ThemeManager {
             case THEME_NAVY_GOLD:
             default:
                 // Exact logo colors
-                bg = Color.rgb(13, 20, 31);          // #0D141F
-                panel = Color.rgb(27, 39, 55);       // #1B2737
-                panelElevated = Color.rgb(35, 49, 67); // #233143
-                gold = Color.rgb(212, 175, 55);      // #D4AF37
-                goldSoft = Color.rgb(220, 183, 86);  // #DCB756
-                white = Color.rgb(245, 247, 250);    // #F5F7FA
-                muted = Color.rgb(174, 187, 202);    // #AEBBCA
+                bg = Color.rgb(4, 7, 15);          // Deep midnight #04070F
+                panel = Color.rgb(10, 17, 31);       // Premium navy #0A111F
+                panelElevated = Color.rgb(16, 27, 45); // Elevated navy #101B2D
+                gold = Color.rgb(230, 190, 70);      // Rich gold #E6BE46
+                goldSoft = Color.rgb(245, 210, 115);  // Champagne gold #F5D273
+                white = Color.rgb(248, 248, 245);    // Warm ivory #F8F8F5
+                muted = Color.rgb(165, 176, 194);    // Soft silver #A5B0C2
                 break;
         }
         success = Color.rgb(46, 204, 113);
