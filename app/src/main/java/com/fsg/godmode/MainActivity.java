@@ -546,8 +546,8 @@ public class MainActivity extends Activity {
                 () -> openLocalWeb("http://127.0.0.1:8080/", "APEX Dashboard"));
         addTile("▤", "BUSINESS HQ", "Clients · jobs · quotes · invoices",
                 () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Business HQ"));
-        addTile("⌘", "LINUX STATUS", "APEX backend health",
-                () -> openLocalWeb("http://127.0.0.1:8765/api/health", "Linux Status"));
+        addTile("⌘", "LINUX STATUS", "Check APEX backend · port 8765",
+                () -> checkApexBackend());
 
         if (theme.isAiEnabled()) {
             addTile("✦", "MAESTRO ASSISTANT", "AI integration not configured",
@@ -905,6 +905,45 @@ public class MainActivity extends Activity {
             String lb = b.loadLabel(pm).toString().toLowerCase();
             return la.compareTo(lb);
         });
+    }
+
+    private void checkApexBackend() {
+        Toast.makeText(this, "Checking APEX backend...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String detail;
+            java.net.HttpURLConnection connection = null;
+            try {
+                java.net.URL url = new java.net.URL(
+                        "http://127.0.0.1:8765/api/health");
+                connection = (java.net.HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(2500);
+                connection.setReadTimeout(2500);
+                connection.setRequestMethod("GET");
+                int status = connection.getResponseCode();
+                detail = (status >= 200 && status < 300)
+                        ? "APEX backend is ONLINE (HTTP " + status + ")."
+                        : "APEX backend responded with HTTP " + status + ".";
+            } catch (Exception ex) {
+                detail = "APEX backend is OFFLINE or unreachable. Check that APEX is running in Termux.";
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+
+            final String result = detail;
+            runOnUiThread(() -> {
+                if (!isFinishing()) {
+                    new android.app.AlertDialog.Builder(MainActivity.this)
+                            .setTitle("APEX Linux Status")
+                            .setMessage(result)
+                            .setPositiveButton("OPEN HEALTH PAGE",
+                                    (dialog, which) -> openLocalWeb(
+                                            "http://127.0.0.1:8765/api/health",
+                                            "Linux Status"))
+                            .setNegativeButton("CLOSE", null)
+                            .show();
+                }
+            });
+        }, "APEX-health-check").start();
     }
 
     private void openLocalWeb(String url, String title) {
