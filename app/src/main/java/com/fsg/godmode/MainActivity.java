@@ -1,6 +1,5 @@
 package com.fsg.godmode;
 
-import android.widget.ImageView;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,6 +10,10 @@ import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.widget.ImageView;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -73,6 +76,7 @@ public class MainActivity extends Activity {
 
     private static final float EDGE_ZONE_DP = 28f;
     private static final float BOTTOM_EDGE_DP = 36f;
+    private static final int REQUEST_WALLPAPER = 7412;
 
     private ThemeManager theme;
     private int currentScope = SCOPE_HOME;
@@ -153,6 +157,7 @@ public class MainActivity extends Activity {
     private void buildRoot() {
         rootFrame = new FrameLayout(this);
         rootFrame.setBackgroundColor(theme.bg);
+        applyBundledWallpaper();
 
         mainColumn = new LinearLayout(this);
         mainColumn.setOrientation(LinearLayout.VERTICAL);
@@ -164,7 +169,7 @@ public class MainActivity extends Activity {
         contentScroll = new ScrollView(this);
         contentScroll.setFillViewport(true);
         contentScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        contentScroll.setBackgroundColor(theme.bg);
+        contentScroll.setBackgroundColor(Color.TRANSPARENT);
         scopeContent = new LinearLayout(this);
         scopeContent.setOrientation(LinearLayout.VERTICAL);
         scopeContent.setPadding(dp(14), dp(8), dp(14), dp(80));
@@ -394,10 +399,13 @@ public class MainActivity extends Activity {
         row.setPadding(dp(10), dp(10), dp(10), dp(10));
         row.setBackground(cardBg(theme.panelElevated, 12));
 
-        TextView icon = txt(label.substring(0, 1).toUpperCase(), 16, theme.gold, true);
-        icon.setGravity(Gravity.CENTER);
+        ImageView icon = new ImageView(this);
+        try { icon.setImageDrawable(ri.loadIcon(getPackageManager())); }
+        catch (Exception ignored) { icon.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager())); }
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
         icon.setBackground(pill(theme.panel));
-        row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(42), dp(42)));
 
         TextView name = txt(label, 14, theme.white, false);
         name.setPadding(dp(12), 0, 0, 0);
@@ -450,13 +458,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Theme → " + theme.getThemeName(), Toast.LENGTH_SHORT).show();
             recreate();
         });
-        addQuickToggle(panel, "🖼  Live Wallpaper", () -> {
-            try {
-                startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER), "Wallpaper"));
-            } catch (Exception e) {
-                Toast.makeText(this, "Wallpaper picker unavailable", Toast.LENGTH_SHORT).show();
-            }
-        });
+        addQuickToggle(panel, "🖼  Change Launcher Wallpaper", () -> chooseLauncherWallpaper());
         addQuickToggle(panel, "🏠  Set Default Home", () -> {
             try { startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)); }
             catch (Exception e) { Toast.makeText(this, "Settings → Default apps → Home", Toast.LENGTH_LONG).show(); }
@@ -546,8 +548,8 @@ public class MainActivity extends Activity {
                 () -> openLocalWeb("http://127.0.0.1:8080/", "APEX Dashboard"));
         addTile("▤", "BUSINESS HQ", "Clients · jobs · quotes · invoices",
                 () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Business HQ"));
-        addTile("⌘", "LINUX STATUS", "Check APEX backend · port 8765",
-                () -> checkApexBackend());
+        addTile("⌘", "LINUX STATUS", "APEX backend health",
+                () -> openLocalWeb("http://127.0.0.1:8765/api/health", "Linux Status"));
 
         if (theme.isAiEnabled()) {
             addTile("✦", "MAESTRO ASSISTANT", "AI integration not configured",
@@ -585,12 +587,26 @@ public class MainActivity extends Activity {
     }
 
     private void addFavouriteRow() {
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        addActionButton(actions, "☎", "CALL", () -> {
+            try { startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))); }
+            catch (Exception e) { Toast.makeText(this, "Phone app unavailable", Toast.LENGTH_SHORT).show(); }
+        });
+        addActionButton(actions, "✉", "MESSAGES", () -> {
+            try { startActivity(new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:"))); }
+            catch (Exception e) { Toast.makeText(this, "Messaging app unavailable", Toast.LENGTH_SHORT).show(); }
+        });
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, -2);
+        ap.bottomMargin = dp(8);
+        scopeContent.addView(actions, ap);
+
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         String[][] favs = {
-                {"📱", "WhatsApp", "com.whatsapp"},
+                {"●", "WhatsApp", "com.whatsapp"},
                 {"⚡", "Tasker", "net.dinglisch.android.taskerm"},
-                {"🖥", "Termux", "com.termux"},
+                {"▣", "Termux", "com.termux"},
                 {"⚙", "Settings", null}
         };
         for (String[] f : favs) {
@@ -598,7 +614,7 @@ public class MainActivity extends Activity {
             cell.setOrientation(LinearLayout.VERTICAL);
             cell.setGravity(Gravity.CENTER);
             cell.setBackground(cardBg(theme.panelElevated, 14));
-            cell.setPadding(dp(8), dp(12), dp(8), dp(12));
+            cell.setPadding(dp(6), dp(10), dp(6), dp(10));
             cell.addView(txt(f[0], 22, theme.gold, true));
             cell.addView(txt(f[1], 10, theme.muted, false));
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, -2, 1);
@@ -613,6 +629,58 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
         rp.bottomMargin = dp(12);
         scopeContent.addView(row, rp);
+    }
+
+    private void addActionButton(LinearLayout row, String symbol, String label, Runnable action) {
+        LinearLayout button = new LinearLayout(this);
+        button.setOrientation(LinearLayout.HORIZONTAL);
+        button.setGravity(Gravity.CENTER);
+        button.setBackground(cardBg(theme.panelElevated, 16));
+        button.setPadding(dp(12), dp(14), dp(12), dp(14));
+        TextView glyph = txt(symbol, 24, theme.gold, true);
+        glyph.setGravity(Gravity.CENTER);
+        button.addView(glyph);
+        TextView text = txt(label, 13, theme.white, true);
+        text.setPadding(dp(10), 0, 0, 0);
+        button.addView(text);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        lp.setMargins(dp(3), 0, dp(3), 0);
+        row.addView(button, lp);
+        button.setOnClickListener(v -> action.run());
+    }
+
+    private void applyBundledWallpaper() {
+        try {
+            String saved = getSharedPreferences(ThemeManager.PREFS, MODE_PRIVATE).getString("launcher_wallpaper_uri", null);
+            if (saved != null) {
+                rootFrame.setBackground(new BitmapDrawable(getResources(), BitmapFactory.decodeStream(getContentResolver().openInputStream(Uri.parse(saved)))));
+                return;
+            }
+            int id = getResources().getIdentifier("psg_wallpaper", "drawable", getPackageName());
+            if (id != 0) rootFrame.setBackground(new BitmapDrawable(getResources(), BitmapFactory.decodeResource(getResources(), id)));
+        } catch (Exception ignored) { rootFrame.setBackgroundColor(theme.bg); }
+    }
+
+    private void chooseLauncherWallpaper() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("image/*");
+        try { startActivityForResult(pick, REQUEST_WALLPAPER); }
+        catch (Exception e) { Toast.makeText(this, "Image picker unavailable", Toast.LENGTH_LONG).show(); }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_WALLPAPER && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            try {
+                Uri uri = data.getData();
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getSharedPreferences(ThemeManager.PREFS, MODE_PRIVATE).edit().putString("launcher_wallpaper_uri", uri.toString()).apply();
+                rootFrame.setBackground(new BitmapDrawable(getResources(), BitmapFactory.decodeStream(getContentResolver().openInputStream(uri))));
+                Toast.makeText(this, "Launcher wallpaper updated", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) { Toast.makeText(this, "Could not load that wallpaper", Toast.LENGTH_LONG).show(); }
+        }
     }
 
     private void buildDashScope() {
@@ -664,10 +732,8 @@ public class MainActivity extends Activity {
         card.setPadding(dp(12), dp(10), dp(12), dp(10));
         card.setBackground(cardBg(theme.panel, 12));
 
-        ImageView icon = new ImageView(this);
-        icon.setImageDrawable(ri.loadIcon(getPackageManager()));
-        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
+        TextView icon = txt(label.substring(0, 1).toUpperCase(), 16, theme.gold, true);
+        icon.setGravity(Gravity.CENTER);
         icon.setBackground(pill(theme.panelElevated));
         card.addView(icon, new LinearLayout.LayoutParams(dp(38), dp(38)));
 
@@ -790,12 +856,12 @@ public class MainActivity extends Activity {
                 () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Service Requests"));
         addTile("📋", "QUOTES & INVOICES", "Generate & track",
                 () -> openLocalWeb("http://127.0.0.1:8080/", "Quotes"));
-        addTile("👥", "CLIENT CRM", "Open Business HQ workspace",
-                () -> openLocalWeb("http://127.0.0.1:8080/business-hq.html", "Client CRM"));
+        addTile("👥", "CLIENT CRM", "Contacts & history",
+                () -> Toast.makeText(this, "Point this tile at your CRM URL", Toast.LENGTH_SHORT).show());
         addTile("📊", "DAILY DASHBOARD", "Today’s numbers",
                 () -> openLocalWeb("http://127.0.0.1:8080/", "Dashboard"));
-        addTile("🛠", "FIELD TOOLS", "Open APEX field workspace",
-                () -> openLocalWeb("http://127.0.0.1:8080/", "Field Tools"));
+        addTile("🛠", "FIELD TOOLS", "Checklists · photos · notes",
+                () -> Toast.makeText(this, "Field tools workspace", Toast.LENGTH_SHORT).show());
     }
 
     private void buildSettingsScope() {
@@ -905,45 +971,6 @@ public class MainActivity extends Activity {
             String lb = b.loadLabel(pm).toString().toLowerCase();
             return la.compareTo(lb);
         });
-    }
-
-    private void checkApexBackend() {
-        Toast.makeText(this, "Checking APEX backend...", Toast.LENGTH_SHORT).show();
-        new Thread(() -> {
-            String detail;
-            java.net.HttpURLConnection connection = null;
-            try {
-                java.net.URL url = new java.net.URL(
-                        "http://127.0.0.1:8765/api/health");
-                connection = (java.net.HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(2500);
-                connection.setReadTimeout(2500);
-                connection.setRequestMethod("GET");
-                int status = connection.getResponseCode();
-                detail = (status >= 200 && status < 300)
-                        ? "APEX backend is ONLINE (HTTP " + status + ")."
-                        : "APEX backend responded with HTTP " + status + ".";
-            } catch (Exception ex) {
-                detail = "APEX backend is OFFLINE or unreachable. Check that APEX is running in Termux.";
-            } finally {
-                if (connection != null) connection.disconnect();
-            }
-
-            final String result = detail;
-            runOnUiThread(() -> {
-                if (!isFinishing()) {
-                    new android.app.AlertDialog.Builder(MainActivity.this)
-                            .setTitle("APEX Linux Status")
-                            .setMessage(result)
-                            .setPositiveButton("OPEN HEALTH PAGE",
-                                    (dialog, which) -> openLocalWeb(
-                                            "http://127.0.0.1:8765/api/health",
-                                            "Linux Status"))
-                            .setNegativeButton("CLOSE", null)
-                            .show();
-                }
-            });
-        }, "APEX-health-check").start();
     }
 
     private void openLocalWeb(String url, String title) {
